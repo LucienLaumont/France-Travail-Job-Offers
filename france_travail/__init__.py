@@ -23,9 +23,13 @@ from .models import (
     Salaire,
     SearchResult,
 )
+from .referentiels import find_secteur_by_rome, get_codes_rome, list_secteurs
 from .search_params import SearchParams
 
 __all__ = [
+    "list_secteurs",
+    "get_codes_rome",
+    "find_secteur_by_rome",
     "FranceTravailClient",
     "SearchParams",
     "SearchResult",
