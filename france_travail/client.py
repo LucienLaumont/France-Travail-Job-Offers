@@ -4,10 +4,11 @@ import httpx
 
 from .auth import OAuth2TokenManager
 from .exceptions import BadRequestError, FranceTravailError, RateLimitError, ServerError
-from .models import SearchResult
+from .models import Offre, SearchResult
 from .search_params import SearchParams
 
-_SEARCH_URL = "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search"
+_BASE_URL = "https://api.francetravail.io/partenaire/offresdemploi/v2/offres"
+_SEARCH_URL = f"{_BASE_URL}/search"
 _MAX_REQUESTS_PER_SECOND = 10
 
 
@@ -58,6 +59,31 @@ class FranceTravailClient:
         result = SearchResult.model_validate(data)
         result.has_more = response.status_code == 206
         return result
+
+    def get_offre(self, offre_id: str) -> Offre | None:
+        self._wait_for_rate_limit()
+        token = self._auth.get_token()
+        response = self._http.get(
+            f"{_BASE_URL}/{offre_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        if response.status_code == 204:
+            return None
+
+        if response.status_code == 400:
+            raise BadRequestError(response.text, status_code=400)
+
+        if response.status_code == 500:
+            raise ServerError("Erreur interne au serveur France Travail", status_code=500)
+
+        if response.status_code != 200:
+            raise FranceTravailError(
+                f"Réponse inattendue : {response.status_code} — {response.text}",
+                status_code=response.status_code,
+            )
+
+        return Offre.model_validate(response.json())
 
     def close(self) -> None:
         self._http.close()
