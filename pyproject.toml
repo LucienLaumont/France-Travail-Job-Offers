@@ -16,3 +16,12 @@ dev = [
 
 [tool.setuptools.package-data]
 france_travail = ["data/*.json"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-httpx>=0.36.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

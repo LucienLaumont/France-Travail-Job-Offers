@@ -23,6 +23,7 @@ Le SDK gère automatiquement le flux OAuth2 Client Credentials et le renouvellem
 from france_travail import FranceTravailClient, SearchParams
 
 with FranceTravailClient(client_id="...", client_secret="...") as client:
+    # Rechercher des offres
     result = client.search(SearchParams(
         motsCles="développeur",
         typeContrat="CDI",
@@ -32,6 +33,13 @@ with FranceTravailClient(client_id="...", client_secret="...") as client:
     print(f"{len(result.resultats)} offres trouvées")
     for offre in result.resultats:
         print(offre.intitule, "-", offre.lieuTravail.libelle if offre.lieuTravail else "")
+
+    # Récupérer une offre par son identifiant
+    offre = client.get_offre("048KLTP")
+    if offre is None:
+        print("Offre introuvable")
+    else:
+        print(offre.intitule, offre.typeContrat)
 ```
 
 ## Limites
@@ -79,7 +87,7 @@ Tous les paramètres sont optionnels.
 | `permis` | `str` | Permis demandé (ex: `B`) |
 | `publieeDepuis` | `int` | Offres publiées depuis maximum X jours (ex: `7`) |
 | `qualification` | `str` | `0` non-cadre, `9` cadre |
-| `range` | `str` | Pagination format `p-d` (ex: `0-49`), max 150 résultats, index max 3000 |
+| `range_` | `str` | Pagination format `p-d` (ex: `0-49`), max 150 résultats, index max 3000 |
 | `region` | `str` | Code région (ex: `75`) |
 | `salaireMin` | `str` | Salaire minimum (requiert `periodeSalaire`) |
 | `secteurActivite` | `str` | Division NAF (2 premiers chiffres), jusqu'à 2 valeurs (ex: `01,02`) |
@@ -88,12 +96,50 @@ Tous les paramètres sont optionnels.
 | `theme` | `str` | Thème ROME (ex: `12`) |
 | `typeContrat` | `str` | Code type de contrat (ex: `CDI`, `CDD`) |
 
+## Référentiel NAF / ROME
+
+Le SDK embarque le référentiel officiel de correspondance entre secteurs NAF et codes ROME (89 secteurs, 2920 métiers, source France Travail septembre 2025).
+
+```python
+from france_travail import list_secteurs, get_codes_rome, find_secteur_by_rome
+
+# Lister tous les secteurs NAF
+secteurs = list_secteurs()
+# [{"id": "1", "libelle": "Culture et production animale..."}, ...]
+
+# Obtenir les codes ROME d'un secteur
+codes = get_codes_rome("62")
+# [{"code": "M1805", "libelle": "Études et développement informatique"}, ...]
+
+# Retrouver le(s) secteur(s) d'un code ROME
+secteurs = find_secteur_by_rome("M1805")
+# [{"id": "62", "libelle": "Programmation, conseil et autres activites informatiques"}]
+```
+
+Utilisation combinée avec la recherche :
+
+```python
+codes_rome = get_codes_rome("62")
+rome_param = ",".join(c["code"] for c in codes_rome)
+
+result = client.search(SearchParams(codeROME=rome_param, departement="75"))
+```
+
+### Mise à jour du référentiel
+
+Le fichier source se trouve dans `docs/`. Pour re-générer le JSON embarqué après une mise à jour :
+
+```bash
+pip install openpyxl
+python scripts/generate_referentiel.py
+```
+
 ## Codes de réponse
 
 | Code | Signification |
 |---|---|
 | `200` | Tous les résultats récupérés (`result.has_more = False`) |
-| `204` | Aucune offre correspondante (liste vide retournée) |
+| `204` | Aucune offre correspondante (liste vide retournée) / offre introuvable (`None`) |
 | `206` | Résultats partiels, d'autres sont disponibles (`result.has_more = True`) |
 | `400` | Mauvaise requête → `BadRequestError` |
 | `500` | Erreur interne serveur → `ServerError` |

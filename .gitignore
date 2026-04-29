@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Fichiers sources binaires (re-générer le JSON via docs/ si mise à jour)
+docs/*.xlsx
