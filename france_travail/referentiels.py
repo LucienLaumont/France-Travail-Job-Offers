@@ -1,7 +1,5 @@
+import importlib.resources
 import json
-from pathlib import Path
-
-_DATA_FILE = Path(__file__).parent / "data" / "secteurs_naf_rome.json"
 
 _secteurs: dict | None = None
 
@@ -9,8 +7,8 @@ _secteurs: dict | None = None
 def _load() -> dict:
     global _secteurs
     if _secteurs is None:
-        with open(_DATA_FILE, encoding="utf-8") as f:
-            _secteurs = json.load(f)
+        data_file = importlib.resources.files("france_travail") / "data" / "secteurs_naf_rome.json"
+        _secteurs = json.loads(data_file.read_text(encoding="utf-8"))
     return _secteurs
 
 
