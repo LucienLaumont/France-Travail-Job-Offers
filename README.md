@@ -1,6 +1,26 @@
 # france-travail-job-offers
 
+![PyPI](https://img.shields.io/pypi/v/france-travail-job-offers)
+![Python](https://img.shields.io/pypi/pyversions/france-travail-job-offers)
+![License](https://img.shields.io/pypi/l/france-travail-job-offers)
+
 SDK Python pour l'[API Offres d'emploi France Travail](https://www.data.gouv.fr/dataservices/api-offres-demploi).
+
+---
+
+## Sommaire
+
+- [Installation](#installation)
+- [Authentification](#authentification)
+- [Usage rapide](#usage-rapide)
+- [Paramètres de recherche](#paramètres-de-recherche-searchparams)
+- [Référentiel NAF / ROME](#référentiel-naf--rome)
+- [Codes de réponse](#codes-de-réponse)
+- [Modèle de réponse](#modèle-de-réponse)
+- [Gestion des erreurs](#gestion-des-erreurs)
+- [Auteur](#auteur)
+
+---
 
 ## Installation
 
@@ -8,14 +28,20 @@ SDK Python pour l'[API Offres d'emploi France Travail](https://www.data.gouv.fr/
 pip install france-travail-job-offers
 ```
 
+---
+
 ## Authentification
 
 L'accès à l'API nécessite un **Identifiant client** et une **Clé secrète** obtenus depuis le portail développeur France Travail.
 
 Le SDK gère automatiquement le flux OAuth2 Client Credentials et le renouvellement des tokens.
 
-- **Token URL** : `https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire`
-- **Scopes requis** : `o2dsoffre`, `api_offresdemploiv2`
+| Paramètre | Valeur |
+|---|---|
+| Token URL | `https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire` |
+| Scopes requis | `o2dsoffre`, `api_offresdemploiv2` |
+
+---
 
 ## Usage rapide
 
@@ -23,6 +49,7 @@ Le SDK gère automatiquement le flux OAuth2 Client Credentials et le renouvellem
 from france_travail import FranceTravailClient, SearchParams
 
 with FranceTravailClient(client_id="...", client_secret="...") as client:
+
     # Rechercher des offres
     result = client.search(SearchParams(
         motsCles="développeur",
@@ -34,7 +61,7 @@ with FranceTravailClient(client_id="...", client_secret="...") as client:
     for offre in result.resultats:
         print(offre.intitule, "-", offre.lieuTravail.libelle if offre.lieuTravail else "")
 
-    # Récupérer une offre par son identifiant
+    # Consulter une offre par identifiant
     offre = client.get_offre("048KLTP")
     if offre is None:
         print("Offre introuvable")
@@ -42,10 +69,10 @@ with FranceTravailClient(client_id="...", client_secret="...") as client:
         print(offre.intitule, offre.typeContrat)
 ```
 
-## Limites
+> **Limite** : 10 requêtes par seconde maximum. Le SDK applique un rate limiter automatique.
+> La pagination est limitée à 150 résultats par page, avec un index de départ maximum à 3000.
 
-- **10 requêtes par seconde** maximum. Le SDK applique un rate limiter automatique.
-- La pagination est limitée à 150 résultats par page, et l'index de départ ne peut pas dépasser 3000.
+---
 
 ## Paramètres de recherche (`SearchParams`)
 
@@ -96,6 +123,8 @@ Tous les paramètres sont optionnels.
 | `theme` | `str` | Thème ROME (ex: `12`) |
 | `typeContrat` | `str` | Code type de contrat (ex: `CDI`, `CDD`) |
 
+---
+
 ## Référentiel NAF / ROME
 
 Le SDK embarque le référentiel officiel de correspondance entre secteurs NAF et codes ROME (89 secteurs, 2920 métiers, source France Travail septembre 2025).
@@ -134,15 +163,19 @@ pip install openpyxl
 python scripts/generate_referentiel.py
 ```
 
+---
+
 ## Codes de réponse
 
 | Code | Signification |
 |---|---|
 | `200` | Tous les résultats récupérés (`result.has_more = False`) |
-| `204` | Aucune offre correspondante (liste vide retournée) / offre introuvable (`None`) |
+| `204` | Aucune offre correspondante (liste vide) / offre introuvable (`None`) |
 | `206` | Résultats partiels, d'autres sont disponibles (`result.has_more = True`) |
 | `400` | Mauvaise requête → `BadRequestError` |
 | `500` | Erreur interne serveur → `ServerError` |
+
+---
 
 ## Modèle de réponse
 
@@ -179,6 +212,8 @@ python scripts/generate_referentiel.py
 | `alternance` | `bool` | Offre d'alternance |
 | `offresManqueCandidats` | `bool` | Offre difficile à pourvoir |
 
+---
+
 ## Gestion des erreurs
 
 ```python
@@ -204,3 +239,9 @@ except ServerError:
 except FranceTravailError as e:
     print(f"Erreur inattendue (HTTP {e.status_code}) : {e}")
 ```
+
+---
+
+## Auteur
+
+Créé par **Lucien Laumont** — [Portfolio](https://lucienlaumont.github.io/portfolio/)
