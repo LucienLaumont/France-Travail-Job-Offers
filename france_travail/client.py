@@ -14,24 +14,34 @@ _MAX_REQUESTS_PER_SECOND = 10
 
 class FranceTravailClient:
     def __init__(self, client_id: str, client_secret: str):
-        self._auth = OAuth2TokenManager(client_id, client_secret)
         self._http = httpx.Client(timeout=30.0)
+        self._auth = OAuth2TokenManager(client_id, client_secret, self._http)
         self._request_timestamps: list[float] = []
 
     def _wait_for_rate_limit(self) -> None:
-        now = time.monotonic()
-        self._request_timestamps = [t for t in self._request_timestamps if now - t < 1.0]
-        if len(self._request_timestamps) >= _MAX_REQUESTS_PER_SECOND:
+        while True:
+            now = time.monotonic()
+            self._request_timestamps = [t for t in self._request_timestamps if now - t < 1.0]
+            if len(self._request_timestamps) < _MAX_REQUESTS_PER_SECOND:
+                break
             sleep_duration = 1.0 - (now - self._request_timestamps[0])
             if sleep_duration > 0:
                 time.sleep(sleep_duration)
         self._request_timestamps.append(time.monotonic())
 
+    def _get(self, url: str, **kwargs: object) -> httpx.Response:
+        try:
+            return self._http.get(url, **kwargs)
+        except httpx.TimeoutException as e:
+            raise FranceTravailError(f"Timeout lors de la requête : {e}") from e
+        except httpx.RequestError as e:
+            raise FranceTravailError(f"Erreur réseau : {e}") from e
+
     def search(self, params: SearchParams | None = None) -> SearchResult:
         self._wait_for_rate_limit()
         token = self._auth.get_token()
         query = params.to_query_dict() if params else {}
-        response = self._http.get(
+        response = self._get(
             _SEARCH_URL,
             headers={"Authorization": f"Bearer {token}"},
             params=query,
@@ -55,15 +65,14 @@ class FranceTravailClient:
                 status_code=response.status_code,
             )
 
-        data = response.json()
-        result = SearchResult.model_validate(data)
+        result = SearchResult.model_validate(response.json())
         result.has_more = response.status_code == 206
         return result
 
     def get_offre(self, offre_id: str) -> Offre | None:
         self._wait_for_rate_limit()
         token = self._auth.get_token()
-        response = self._http.get(
+        response = self._get(
             f"{_BASE_URL}/{offre_id}",
             headers={"Authorization": f"Bearer {token}"},
         )

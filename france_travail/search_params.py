@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -37,7 +37,7 @@ class SearchParams:
     permis: str | None = None
     publieeDepuis: int | None = None
     qualification: str | None = None
-    range: str | None = None
+    range_: str | None = None
     region: str | None = None
     salaireMin: str | None = None
     secteurActivite: str | None = None
@@ -51,8 +51,6 @@ class SearchParams:
         for key, value in self.__dict__.items():
             if value is None:
                 continue
-            if isinstance(value, bool):
-                params[key] = "true" if value else "false"
-            else:
-                params[key] = str(value)
+            api_key = "range" if key == "range_" else key
+            params[api_key] = "true" if isinstance(value, bool) and value else "false" if isinstance(value, bool) else str(value)
         return params
